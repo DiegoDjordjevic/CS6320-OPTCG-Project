@@ -19,7 +19,13 @@ for filename in os.listdir(cardlist_path):      #iterates over every file in the
             frontCols = dl.find_all('div', class_='frontCol')
             backCols = dl.find_all('div', class_='backCol')
             for infoCol, cardName, frontCol, backCol in zip(infoCols, cardNames, frontCols, backCols):
-                print(infoCol.text)
+                #extracts card id, rarity, and type
+                info = infoCol.text.split('|')
+                card_id = info[0].strip()
+                rarity = info[1].strip()
+                card_type = info[2].strip()
+                info = [x.strip() for x in info]
+                print(info)
                 name = cardName.text
                 #removes Cost prefix for characters, events, and stages, as well as removes Life prefix for Leaders
                 cost = backCol.find('div', class_='cost').text.removeprefix('Cost').removeprefix('Life')
