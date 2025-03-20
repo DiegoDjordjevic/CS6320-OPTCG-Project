@@ -1,6 +1,37 @@
 from bs4 import BeautifulSoup
 import os
-import re
+import json
+
+class Card:
+    def __init__(self, card_id, rarity, card_type, card_set, name, attribute, power, counter, color, feature, text, trigger):
+        self.card_id = card_id
+        self.card_set = card_set
+        self.name = name
+        self.cost = cost
+        self.attribute = attribute
+        self.power = power
+        self.counter = counter
+        self.color = color
+        self.feature = feature
+        self.text = text
+        self.trigger = trigger
+
+class Leader(Card):
+    def __init__(self, card_id, card_set, name, life, attribute, power, counter, color, feature, text, trigger):
+        super().__init__(card_id, card_set, name, attribute, power, counter, color, feature, text, trigger)
+        self.life = life
+
+class Character(Card):
+    def __init__(self, card_id, card_set, name, cost, attribute, power, counter, color, feature, text, trigger):
+        super().__init__(card_id, card_set, name, attribute, power, counter, color, feature, text, trigger)
+        self.cost = cost
+
+class Event(Card):
+    def __init__(self, card_id, card_set, name, cost, attribute, power, counter, color, feature, text, trigger):
+        super().__init__(card_id, card_set, name, attribute, power, counter, color, feature, text, trigger)
+        self.cost = cost
+
+
 
 cardlist_path = 'Cardlists'     #path to directory with all the html files containing card data
 for filename in os.listdir(cardlist_path):      #iterates over every file in the directory
@@ -41,8 +72,14 @@ for filename in os.listdir(cardlist_path):      #iterates over every file in the
                 feature = backCol.find('div', class_='feature').text.removeprefix('Type')
                 #removes Effect prefix leaving only the effects themselves
                 text = backCol.find('div', class_='text').text.removeprefix('Effect')
+                #
+                trigger = backCol.find('div', class_='trigger')
+                trigger = trigger.text.removeprefix('Trigger') if trigger else ''
+                #
+                card_set = backCol.find('div', class_='getInfo').text.removeprefix('Card Set(s)-')
+                print(card_set)
                 print(name)
-                print([cost, attribute, power, counter, color, feature, text])
+                print([cost, attribute, power, counter, color, feature, text, trigger])
                 print()
                 break
             break
