@@ -32,7 +32,10 @@ class Event(Card):
         super().__init__(card_id, rarity, card_type, card_set, name, attribute, power, counter, color, feature, text, trigger)
         self.cost = cost
 
-
+class Stage(Card):
+    def __init__(self, card_id, rarity, card_type, card_set, name, cost, attribute, power, counter, color, feature, text, trigger):
+        super().__init__(card_id, rarity, card_type, card_set, name, attribute, power, counter, color, feature, text, trigger)
+        self.cost = cost
 
 cardlist_path = 'Cardlists'     #path to directory with all the html files containing card data
 for filename in os.listdir(cardlist_path):      #iterates over every file in the directory
@@ -62,15 +65,15 @@ for filename in os.listdir(cardlist_path):      #iterates over every file in the
                 #removes Cost prefix for characters, events, and stages, as well as removes Life prefix for Leaders
                 cost = backCol.find('div', class_='cost').text.removeprefix('Cost').removeprefix('Life')
                 #removes everything except the actual attribute itself
-                attribute = backCol.find('div', class_='attribute').text.removeprefix('\nAttribute\n').removesuffix('\n')
+                attribute = backCol.find('div', class_='attribute').text.removeprefix('\nAttribute\n').removesuffix('\n').split('/')
                 #removes Power prefix and leaves only the power value itself
                 power = backCol.find('div', class_='power').text.removeprefix('Power')
                 #removes Counter prefix and leaves only the counter value itself
                 counter = backCol.find('div', class_='counter').text.removeprefix('Counter').removesuffix('-')
                 #removes Color prefix and leaves only the color itself
-                color = backCol.find('div', class_='color').text.removeprefix('Color')
+                color = backCol.find('div', class_='color').text.removeprefix('Color').split('/')
                 #removes Type prefix and leaves just the type itself
-                feature = backCol.find('div', class_='feature').text.removeprefix('Type')
+                feature = backCol.find('div', class_='feature').text.removeprefix('Type').split('/')
                 #removes Effect prefix leaving only the effects themselves
                 text = backCol.find('div', class_='text').text.removeprefix('Effect')
                 #
@@ -89,6 +92,8 @@ for filename in os.listdir(cardlist_path):      #iterates over every file in the
                         card = Character(card_id, rarity, card_type, card_set, name, cost, attribute, power, counter, color, feature, text, trigger)
                     case 'EVENT':
                         card = Event(card_id, rarity, card_type, card_set, name, cost, attribute, power, counter, color, feature, text, trigger)
+                    case 'STAGE':
+                        card = Stage(card_id, rarity, card_type, card_set, name, cost, attribute, power, counter, color, feature, text, trigger)
 
                 print(json.dumps(card.__dict__, indent=4))
                 break
