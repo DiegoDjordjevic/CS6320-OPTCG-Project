@@ -7,13 +7,13 @@ import time
 import os
 
 driver = webdriver.Chrome()
-driver.get('https://en.onepiece-cardgame.com/cardlist/')  # Open webpage
-
+#driver.get('https://en.onepiece-cardgame.com/cardlist/')  # Open webpage
+driver.get('https://asia-en.onepiece-cardgame.com/cardlist/')
 # Wait until the dropdown is available
 WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, "series")))
 
 # Create a folder to save HTML files
-folder_name = "Cardlists"
+folder_name = "Asia-Cardlists"
 os.makedirs(folder_name, exist_ok=True)
 
 # Locate the series dropdown that lets you filter through the different sets
@@ -27,6 +27,8 @@ series_values = [option.get_attribute("value") for option in select.options if o
 
 # Loop through each series value (card set, starter deck) and download the corresponding HTML
 for series_value in series_values:
+    if os.path.isfile(os.path.join(folder_name, f'series_{series_value}.html')):
+        continue
     print(f"Selecting series: {series_value}")
 
     series_dropdown = driver.find_element(By.NAME, "series")
@@ -36,9 +38,9 @@ for series_value in series_values:
                           series_dropdown, series_value)
 
     # Wait for the page to update after selecting a new series
-    time.sleep(2)  # You can replace this with WebDriverWait if there's a specific element to wait for
+    time.sleep(2)
 
-    # Click the "SEARCH" button after the selection is updated
+    #Click the "SEARCH" button after the selection is updated to load the html matching the selected filter
     search_button = driver.find_element(By.CSS_SELECTOR, '.commonBtn.submitBtn input[type="submit"]')
     WebDriverWait(driver, 10).until(EC.element_to_be_clickable(search_button))
     search_button.click()
