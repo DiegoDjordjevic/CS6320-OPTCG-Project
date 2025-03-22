@@ -37,7 +37,8 @@ class Stage(Card):
         super().__init__(card_id, rarity, card_type, card_set, name, attribute, power, counter, color, feature, text, trigger)
         self.cost = cost
 
-cardlist_path = 'Cardlists'     #path to directory with all the html files containing card data
+cardlist_path = 'Asia-Cardlists'     #path to directory with all the html files containing card data
+cardlist_file = 'asia-cardlist.json'
 cardlist = {}
 for filename in os.listdir(cardlist_path):      #iterates over every file in the directory
     with open(os.path.join(cardlist_path, filename), 'r') as f:
@@ -70,9 +71,9 @@ for filename in os.listdir(cardlist_path):      #iterates over every file in the
                 #removes Cost prefix for characters, events, and stages, as well as removes Life prefix for Leaders
                 cost = backCol.find('div', class_='cost').text.removeprefix('Cost').removeprefix('Life')
                 #removes everything except the actual attribute itself
-                attribute = backCol.find('div', class_='attribute').text.removeprefix('\nAttribute\n').removesuffix('\n').split('/')
+                attribute = backCol.find('div', class_='attribute').text.removeprefix('\nAttribute\n').strip().removesuffix('-').split('/')
                 #removes Power prefix and leaves only the power value itself
-                power = backCol.find('div', class_='power').text.removeprefix('Power')
+                power = backCol.find('div', class_='power').text.removeprefix('Power').removesuffix('-')
                 #removes Counter prefix and leaves only the counter value itself
                 counter = backCol.find('div', class_='counter').text.removeprefix('Counter').removesuffix('-')
                 #removes Color prefix and leaves only the color itself
@@ -80,7 +81,7 @@ for filename in os.listdir(cardlist_path):      #iterates over every file in the
                 #removes Type prefix and leaves just the type itself
                 feature = backCol.find('div', class_='feature').text.removeprefix('Type').split('/')
                 #removes Effect prefix leaving only the effects themselves
-                text = backCol.find('div', class_='text').text.removeprefix('Effect')
+                text = backCol.find('div', class_='text').text.removeprefix('Effect').removesuffix('-')
                 #
                 trigger = backCol.find('div', class_='trigger')
                 trigger = trigger.text.removeprefix('Trigger') if trigger else ''
@@ -104,12 +105,14 @@ for filename in os.listdir(cardlist_path):      #iterates over every file in the
                 #print(card_json)
                 #'''
                 existing_card = cardlist.get(card.card_id, None)
-                if ( existing_card is not None):
-                    print(card.card_set)
-                    print(existing_card)
-                else:
-                    cardlist[card.card_id] = card_json
+                if existing_card is None:
+                    cardlist[card.card_id] = card.__dict__
+                #else:
+                    #print(card.card_set)
+                    #print(existing_card)
                     #'''
                 #break
     #break
 
+with open(cardlist_file, 'w') as f:
+    json.dump(cardlist, f, indent=4)
