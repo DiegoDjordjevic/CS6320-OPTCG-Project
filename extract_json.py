@@ -119,5 +119,6 @@ for filename in os.listdir(cardlist_path):      #iterates over every file in the
                     #'''
                 #break
     #break
+cardlist = dict(sorted(cardlist.items()))
 with open(cardlist_file, 'w') as f:
     json.dump(cardlist, f, indent=4)
