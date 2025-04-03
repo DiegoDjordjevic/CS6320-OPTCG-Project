@@ -36,18 +36,24 @@ class Stage(Card):
     def __init__(self, card_id, rarity, card_type, card_set, name, cost, attribute, power, counter, color, feature, text, trigger):
         super().__init__(card_id, rarity, card_type, card_set, name, attribute, power, counter, color, feature, text, trigger)
         self.cost = cost
-
-cardlist_path = 'Asia-Cardlists'     #path to directory with all the html files containing card data
-cardlist_file = 'asia-cardlist.json'
+Asia = True
+if Asia:
+    cardlist_path = 'Asia-Cardlists'     #path to directory with all the html files containing card data
+    cardlist_file = 'asia-cardlist.json'
+else:
+    cardlist_path = 'Cardlists'  # path to directory with all the html files containing card data
+    cardlist_file = 'cardlist.json'
 cardlist = {}
 for filename in os.listdir(cardlist_path):      #iterates over every file in the directory
+    print(f'opening: {filename}')
     with open(os.path.join(cardlist_path, filename), 'r') as f:
         #parses html file using BeautifulSoup
         soup = BeautifulSoup(f, 'html.parser', multi_valued_attributes=None)
         #finds the name of the selected filter from html
         selection = soup.find('option', selected=True)
-        print(filename)
+        print(f'extracting card data from: {filename}')
         print(selection.text)
+        print()
         #finds all the card blocks within the html
         dl_list = soup.find_all('dl', class_='modalCol')
         #print(dl_list)
@@ -113,6 +119,5 @@ for filename in os.listdir(cardlist_path):      #iterates over every file in the
                     #'''
                 #break
     #break
-
 with open(cardlist_file, 'w') as f:
     json.dump(cardlist, f, indent=4)
