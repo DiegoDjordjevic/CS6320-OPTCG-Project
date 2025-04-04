@@ -46,7 +46,7 @@ else:
 cardlist = {}
 for filename in os.listdir(cardlist_path):      #iterates over every file in the directory
     print(f'opening: {filename}')
-    with open(os.path.join(cardlist_path, filename), 'r') as f:
+    with open(os.path.join(cardlist_path, filename), 'r', encoding="iso-8859-1") as f:
         #parses html file using BeautifulSoup
         soup = BeautifulSoup(f, 'html.parser', multi_valued_attributes=None)
         #finds the name of the selected filter from html

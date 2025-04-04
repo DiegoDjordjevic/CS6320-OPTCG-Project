@@ -62,7 +62,7 @@ for series_value in series_values:
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(html_content)
 
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding='utf-8') as file:
         soup = BeautifulSoup(file, 'html.parser', multi_valued_attributes=None)
         # finds the name of the selected filter from html
         selection = soup.find('option', selected=True)
