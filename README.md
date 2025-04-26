@@ -2,8 +2,10 @@ This project is meant to be a trading card generator based on the One Piece Trad
 
 HOW TO RUN:
 
+TO INSTALL ALL REQUIREMENTS:
+    - Run the command 'pip install -r requirements.txt'
+
 TO DOWNLOAD AN UPDATED CARDLIST:
-    - Install Selenium using 'pip install selenium'
     - Download the cardlist by running 'python download_cardlists.py'
     - This will open a browser instance that will manually scrape the OPTCG website for every current playable card, creating a series of HTML files corresponding
     to each card. These can be found in a folder titled 'Asia-Cardlists'.
@@ -12,6 +14,10 @@ TO EXTRACT JSON FROM HTML FILES:
     - First, obtain the HTML data for each card by running download_cardlists.py (see above).
     - Run 'extract_json.py'
     - This will create a .json file called 'extract_json.py', containing detailed information about each card in the dataset extracted by download_cardlists.py.
+
+TO BUILD SQLITE DATABASE OF EACH CARD:
+    - Run build_database.py
+    - This will either update or build a new database "asia-cards.db" based in SQLite using Python's built-in SQLite functionality.
 
 Next Steps:
 Have an automatic check for the downloaded cardlists and the extracted data.
