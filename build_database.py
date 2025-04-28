@@ -25,7 +25,7 @@ def build_sqlite(json_name, database_name):
             counter INTEGER,
             text TEXT NOT NULL,
             life INTEGER, 
-            cost INTEGER NOT NULL,
+            cost INTEGER,
             trigger TEXT
         )
         '''
@@ -74,6 +74,7 @@ def build_sqlite(json_name, database_name):
             FOREIGN KEY (card_id) REFERENCES cards(card_id),
             FOREIGN KEY (feature_name) REFERENCES features(feature_name)
         )'''
+        cursor.execute(feature_cards_query)
 
         # Open json and load information into database.
         f = open(json_name)
@@ -84,18 +85,74 @@ def build_sqlite(json_name, database_name):
             next_card = data[i]
             query_stem = "INSERT OR IGNORE INTO cards (card_id, rarity, card_type, card_set, name"
             values_stem = "VALUES("
-            values_stem += str(next_card['card_id']) + ", " + str(next_card['rarity']) + next_card['card_type'] + ", " + next_card['card_set'] + next_card['name']
-            if (next_card['power'] != ''):
-                query_stem += ", power"
-                values_stem += ", " + next_card['power']
+            values_stem += "\"" +str(next_card['card_id']) + "\", \""  + str(next_card['rarity']) + "\", \"" + next_card['card_type'] + "\", \"" + next_card['card_set'] + "\", \"" + next_card['name'].replace("\'", "\'\'").replace("\"", "\"\"") + "\""
+            
+            # Give a card power if it has one.
+            if ('power' in next_card):
+                if (next_card['power'] != ''):
+                    query_stem += ", power"
+                    values_stem += ", \"" + next_card['power'].replace("\'", "\'\'").replace("\"", "\"\"") + "\""
 
-            if (next_card['counter'] != ''):
-                query_stem += ", counter"
-                values_stem += ", " + next_card['counter']
+            # Give a card a counter effect if it has one.
+            if (('counter' in next_card)):
+                if next_card['counter'] != '':
+                    query_stem += ", counter"
+                    values_stem += ", " + next_card['counter']
+            
+            # Add card text
+            query_stem += ", text"
+            values_stem += ", \"" + next_card['text'].replace("\'", "\'\'").replace("\"", "\"\"") + "\""
+
+            # Give a card a life value if it has one.
+            if (('life' in next_card)):
+                if next_card['life'] != '':
+                    query_stem += ", life"
+                    values_stem += ", " + next_card['life']
+
+            # Add card cost
+            if (('cost' in next_card)):
+                if ((next_card['cost'] != '') & (next_card['cost']!= '-')):
+                    query_stem += ", cost"
+                    values_stem += ", " + str(next_card['cost'])
             
 
-            # Check for features and add any new features to the database
-            card_features = next_card['feature']
+            # Add card trigger
+            if ('trigger' in next_card):
+                if next_card['trigger'] != '':
+                    query_stem += ", trigger"
+                    values_stem += ", \"" + next_card['trigger'].replace("\'", "\'\'").replace("\"", "\"\"") + "\""
+            query_stem += ")"
+            values_stem += ")"
+
+            print(query_stem)
+            print(values_stem)
+            cursor.execute(query_stem + values_stem)
+            print("Success!")
+            # Add attributes and connect one-to-many relationships.
+            for attribute in next_card['attribute']:
+                if(attribute != ''):
+                    attribute_creation_query = f"INSERT OR IGNORE INTO attributes (attribute_name) VALUES (\"{attribute}\")"
+                    cursor.execute(attribute_creation_query)
+                    attribute_link_query = f"INSERT OR IGNORE INTO attribute_cards (card_id, attribute_name) VALUES (\"{next_card['card_id']}\", \"{attribute}\")"
+                    cursor.execute(attribute_link_query)
+            
+            for color in next_card['color']:
+                if(color != ''):
+                    color_creation_query = f"INSERT OR IGNORE INTO colors (color_name) VALUES (\"{color}\")"
+                    cursor.execute(color_creation_query)
+                    color_link_query = f"INSERT OR IGNORE INTO color_cards (card_id, color_name) VALUES (\"{next_card['card_id']}\", \"{color}\")"
+                    cursor.execute(color_link_query)
+            
+            for feature in next_card['feature']:
+                if(feature != ''):
+                    feature_creation_query = f"INSERT OR IGNORE INTO features (feature_name) VALUES (\"{feature}\")"
+                    cursor.execute(feature_creation_query)
+                    feature_link_query = f"INSERT OR IGNORE INTO feature_cards (card_id, feature_name) VALUES (\"{next_card['card_id']}\", \"{feature}\")"
+                    cursor.execute(feature_link_query)
+
+
+
+        
             
             
 
