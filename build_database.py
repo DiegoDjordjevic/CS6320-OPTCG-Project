@@ -23,7 +23,7 @@ def build_sqlite(json_name, database_name):
             name TEXT NOT NULL,
             power INTEGER,
             counter INTEGER,
-            text TEXT NOT NULL,
+            text TEXT,
             life INTEGER, 
             cost INTEGER,
             trigger TEXT
@@ -106,9 +106,11 @@ def build_sqlite(json_name, database_name):
                     query_stem += ", counter"
                     values_stem += ", " + next_card['counter']
             
-            # Add card text
-            query_stem += ", text"
-            values_stem += ", \"" + next_card['text'].replace("\'", "\'\'").replace("\"", "\"\"") + "\""
+            # Give a card text if it has text
+            if 'text' in next_card:
+                if next_card['text'] != '':
+                    query_stem += ", text"
+                    values_stem += ", \"" + next_card['text'].replace("\'", "\'\'").replace("\"", "\"\"") + "\""
 
             # Give a card a life value if it has one.
             if 'life' in next_card:
