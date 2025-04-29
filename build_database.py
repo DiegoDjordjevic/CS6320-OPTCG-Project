@@ -155,7 +155,7 @@ def build_sqlite(json_name, database_name):
         
             
             
-
+        sqlite_connection.commit()
         cursor.close()
         print("Connection closed with database: " + database_name)
     except sqlite3.Error as error:
