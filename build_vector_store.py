@@ -11,15 +11,14 @@ data = json.load(f)
 documents = []
 ids = []
 for i in data:
-    documents.append(i)
+    documents.append(str(data[i]))
     ids.append(data[i]['card_id'])
-print(ids)
+#print("documents" + str(documents))
 
 card_base.upsert(documents=documents, ids=ids)
-
 results = card_base.query(
-    query_texts=["Red Pirate"], # Chroma will embed this for you
-    n_results=2 # how many results to return
+    query_texts=["Strawhat, Red, Leader"], # Chroma will embed this for you
+    n_results=5 # how many results to return
 )
 
 print(results)
