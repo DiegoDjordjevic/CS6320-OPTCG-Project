@@ -5,8 +5,8 @@ from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import os
 from dotenv import load_dotenv
-client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 load_dotenv()
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=os.getenv("GOOGLE_API_KEY"))
 
 class Card:
@@ -84,6 +84,23 @@ def get_cards_of_type(card_type, cursor):
         relevant_cards[card_dict['card_id']] = card_dict
     return dict(sorted(relevant_cards.items()))
 
+def generate_generic_card(card_type, cursor):
+    relevant_cards = get_cards_of_type(card_type, cursor)
+    card_context = json.dumps(relevant_cards, indent=4)
+    response =  client.models.generate_content(
+        model="gemini-2.0-flash", contents=[
+            f"Create a new {card_type} Card for the One Piece Trading Card Game. Use the examples provided as inspiration, but make sure to keep the card original. Format the result in the same json format as the examples. Examples: {card_context}"]
+    )
+    return response
+
+def generate_card(card_type, cursor, relevant_cards, card_template):
+    card_context = json.dumps(relevant_cards, indent=4)
+    response = client.models.generate_content(
+        model="gemini-2.0-flash", contents=[
+            f"Fill in the missing details for the following {card_type} Card for the One Piece Trading Card Game. Card template: {card_template}. Make sure to use the values in the card template and fill in missing attributes. Use the examples provided as inspiration, but make sure to keep the card original. Examples: {card_context}"]
+    )
+    return response
+
 def create_card(card_database):
     sqlite_connection = sqlite3.connect(card_database)
     cursor = sqlite_connection.cursor()
@@ -97,50 +114,96 @@ def create_card(card_database):
         choice = input('Enter your choice (1-5): ')
         if choice == '1':
             card_type = 'LEADER'
-            relevant_cards = get_cards_of_type(card_type, cursor)
-            # with open('leaders.json', 'w') as f:
-            #    json.dump(relevant_cards, f, indent=4)
-            card_context = json.dumps(relevant_cards, indent=4)
-            response = client.models.generate_content(
-                model="gemini-2.0-flash", contents=[
-                    f"Create a new {card_type} Card for the One Piece Trading Card Game. Use the examples provided as inspiration but keep it original. Format the result in the same json format as the examples. Examples: {card_context}"]
-            )
-            print(response.text)
-
+            while True:
+                print('Would you like to specify card details?')
+                print('1. Yes')
+                print('2. No, generate a completely random card')
+                choice = input('Enter your choice (1-2): ')
+                if choice == '2':
+                    card = generate_generic_card(card_type, cursor)
+                    print(card.text)
+                    break
+                elif choice == '1':
+                    print('Enter optional card details:')
+                    card_template = dict()
+                    card_template['name'] = input('Name: ')
+                    card_template['power'] = input('Power: ')
+                    card_template['life'] = input('Life: ')
+                    card_template['text'] = input('Leader\'s effect: ')
+                    print('For the next features if you wish to specify multiple separate them with commas')
+                    card_template['feature'] = input('Features (ex. Straw Hat Crew, Fishman): ').split(',')
+                    card_template['color'] = input('Colors (Red, Green, Blue, Purple, Black, Yellow): ').split(',')
+                    card_template['attribute'] = input('Attributes: (Slash, Ranged, Special, Strike, Wisdom): ').split(',')
+                    #set attributes user should not set as blank
+                    card_template['card_id'] = ''
+                    card_template['card_set'] = ''
+                    card_template['counter'] = ''
+                    card_template['trigger'] = ''
+                    #ground card type
+                    card_template['card_type'] = card_type
+                    card_template['rarity'] = 'L'
+                    similar_leaders = vector_store.similarity_search(query=str(card_template), k=5, filter={"card_type": card_type})
+                    relevant_cards = ""
+                    for lead in similar_leaders:
+                        print(f"* {lead.page_content} [{lead.metadata}]")
+                        relevant_cards += lead.page_content + ",\n"
+                    card = generate_card(card_type, cursor, relevant_cards, str(card_template))
+                    print(card.text)
+                    break
+                else:
+                    print('Invalid choice. Please try again.')
+                    continue
 
         elif choice == '2':
             card_type = 'CHARACTER'
-            relevant_cards = get_cards_of_type(card_type, cursor)
-            #with open('characters.json', 'w') as f:
-            #    json.dump(relevant_cards, f, indent=4)
-            card_context = json.dumps(relevant_cards, indent=4)
-            response = client.models.generate_content(
-                model="gemini-2.0-flash", contents=[
-                    f"Create a new {card_type} Card for the One Piece Trading Card Game. Use the examples provided as inspiration but keep it original. Format the result in the same json format as the examples. Examples: {card_context}"]
-            )
-            print(response.text)
+            print('Would you like to specify card details?')
+            print('1. Yes')
+            print('2. No, generate a completely random card')
+            choice = input('Enter your choice (1-2): ')
+            if choice == 2:
+                card = generate_generic_card(card_type, cursor)
+                print(card.text)
+                break
+            elif choice == 1:
+                print('Enter optional card details:')
+                break
+            else:
+                print('Invalid choice. Please try again.')
+                continue
+
         elif choice == '3':
             card_type = 'EVENT'
-            relevant_cards = get_cards_of_type(card_type, cursor)
-            #with open('events.json', 'w') as f:
-            #    json.dump(relevant_cards, f, indent=4)
-            card_context = json.dumps(relevant_cards, indent=4)
-            response = client.models.generate_content(
-                model="gemini-2.0-flash", contents=[
-                    f"Create a new {card_type} Card for the One Piece Trading Card Game. Use the examples provided as inspiration but keep it original. Format the result in the same json format as the examples. Examples: {card_context}"]
-            )
-            print(response.text)
+            print('Would you like to specify card details?')
+            print('1. Yes')
+            print('2. No, generate a completely random card')
+            choice = input('Enter your choice (1-2): ')
+            if choice == 2:
+                card = generate_generic_card(card_type, cursor)
+                print(card.text)
+                break
+            elif choice == 1:
+                print('Enter optional card details:')
+                break
+            else:
+                print('Invalid choice. Please try again.')
+                continue
+
         elif choice == '4':
             card_type = 'STAGE'
-            relevant_cards = get_cards_of_type(card_type, cursor)
-            #with open('stages.json', 'w') as f:
-            #    json.dump(relevant_cards,f, indent=4)
-            card_context = json.dumps(relevant_cards, indent=4)
-            response = client.models.generate_content(
-                model="gemini-2.0-flash", contents=[
-                    f"Create a new {card_type} Card for the One Piece Trading Card Game. Use the examples provided as inspiration but keep it original. Format the result in the same json format as the examples. Examples: {card_context}"]
-            )
-            print(response.text)
+            print('Would you like to specify card details?')
+            print('1. Yes')
+            print('2. No, generate a completely random card')
+            choice = input('Enter your choice (1-2): ')
+            if choice == 2:
+                card = generate_generic_card(card_type, cursor)
+                print(card.text)
+                break
+            elif choice == 1:
+                print('Enter optional card details:')
+                break
+            else:
+                print('Invalid choice. Please try again.')
+                continue
         elif choice == '5':
             break
         else:
