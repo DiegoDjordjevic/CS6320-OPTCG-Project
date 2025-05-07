@@ -1,13 +1,14 @@
 import json
 import sqlite3
-from google import genai
 from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAI
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.prompts import PromptTemplate
 import os
 from dotenv import load_dotenv
-load_dotenv()
-client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=os.getenv("GOOGLE_API_KEY"))
+import re
+import ast
 
 class Card:
     def __init__(self, card_id, rarity, card_type, card_set, name, attribute, power, counter, color, feature, text, trigger):
@@ -86,20 +87,40 @@ def get_cards_of_type(card_type, cursor):
 
 def generate_generic_card(card_type, cursor):
     relevant_cards = get_cards_of_type(card_type, cursor)
-    card_context = json.dumps(relevant_cards, indent=4)
-    response =  client.models.generate_content(
-        model="gemini-2.0-flash", contents=[
-            f"Create a new {card_type} Card for the One Piece Trading Card Game. Use the examples provided as inspiration, but make sure to keep the card original. Format the result in the same json format as the examples. Examples: {card_context}"]
-    )
+    card_examples = json.dumps(relevant_cards, indent=4)
+    prompt = f"Create a new {card_type} Card for the One Piece Trading Card Game. Use the examples provided as inspiration, but make sure to keep the card original. Format the output like the examples. Examples: {card_examples}"
+    response = llm.invoke(prompt)
     return response
 
 def generate_card(card_type, cursor, relevant_cards, card_template):
-    card_context = json.dumps(relevant_cards, indent=4)
-    response = client.models.generate_content(
-        model="gemini-2.0-flash", contents=[
-            f"Fill in the missing details for the following {card_type} Card for the One Piece Trading Card Game. Card template: {card_template}. Make sure to use the values in the card template and fill in missing attributes. Use the examples provided as inspiration, but make sure to keep the card original. Examples: {card_context}"]
-    )
+    card_examples = json.dumps(relevant_cards, indent=4)
+    prompt = f"Fill in the missing details for the following {card_type} Card for the One Piece Trading Card Game. Card template: {card_template}. Make sure to fill in the missing attributes. Use the examples provided as inspiration, but make sure to keep the card original. Format the output like the examples. Examples: {card_examples}"
+    response = llm.invoke(prompt)
     return response
+
+def generate_card_ragchain(card_type, card_template, randomness):
+    gen_card_chain = (
+            {"card_type": RunnablePassthrough() | (lambda x: card_type),
+             "card_examples": vector_store.as_retriever(search_type="mmr", search_kwargs={"k": 10, "fetch_k": 40, "lambda_mult": randomness, "filter": {"card_type": card_type}}) | format_cards,
+             "card_template": RunnablePassthrough()}
+            | card_prompt
+            | llm
+            | format_new_card
+    )
+    card = gen_card_chain.invoke(card_template)
+    return card
+
+def format_cards(cards):
+    card_examples = ""
+    for card in cards:
+        card_examples += f"{card.page_content}\n"
+    print(f"Cards being used as examples: \n{card_examples}")
+    return card_examples
+
+def format_new_card(card):
+    cleaned = re.sub(r"^```json|```$", "", card.strip()).strip()
+    res = ast.literal_eval(cleaned)
+    return json.dumps(res, indent=4)
 
 def create_card(card_database):
     sqlite_connection = sqlite3.connect(card_database)
@@ -121,34 +142,42 @@ def create_card(card_database):
                 choice = input('Enter your choice (1-2): ')
                 if choice == '2':
                     card = generate_generic_card(card_type, cursor)
-                    print(card.text)
+                    print(card)
                     break
                 elif choice == '1':
                     print('Enter optional card details:')
                     card_template = dict()
+                    card_template['card_id'] = ''
+                    card_template['rarity'] = 'L'
+                    card_template['card_type'] = card_type
+                    card_template['card_set'] = ''
                     card_template['name'] = input('Name: ')
                     card_template['power'] = input('Power: ')
+                    card_template['counter'] = ''
                     card_template['life'] = input('Life: ')
                     card_template['text'] = input('Leader\'s effect: ')
                     print('For the next features if you wish to specify multiple separate them with commas')
                     card_template['feature'] = input('Features (ex. Straw Hat Crew, Fishman): ').split(',')
                     card_template['color'] = input('Colors (Red, Green, Blue, Purple, Black, Yellow): ').split(',')
                     card_template['attribute'] = input('Attributes: (Slash, Ranged, Special, Strike, Wisdom): ').split(',')
-                    #set attributes user should not set as blank
-                    card_template['card_id'] = ''
-                    card_template['card_set'] = ''
-                    card_template['counter'] = ''
                     card_template['trigger'] = ''
-                    #ground card type
-                    card_template['card_type'] = card_type
-                    card_template['rarity'] = 'L'
-                    similar_leaders = vector_store.similarity_search(query=str(card_template), k=5, filter={"card_type": card_type})
+                    print("How random do you want the missing details to be? 0(random) - 1(similar to cards sharing same details)")
+                    try:
+                        lambda_mult = float(input('Enter a decimal between 0 and 1: '))
+                    except ValueError:
+                        print("Invalid input. Please enter a valid decimal number next time. randomness set to default of 0.8")
+                        lambda_mult = 0.8
+                    """similar_leaders = vector_store.similarity_search(query=str(card_template), k=10, filter={"card_type": card_type})
                     relevant_cards = ""
                     for lead in similar_leaders:
                         print(f"* {lead.page_content} [{lead.metadata}]")
                         relevant_cards += lead.page_content + ",\n"
                     card = generate_card(card_type, cursor, relevant_cards, str(card_template))
-                    print(card.text)
+                    print(card)
+                    print(format_new_card(card))"""
+                    print("Card generated using RAG chain:")
+                    result = generate_card_ragchain(card_type, str(card_template), lambda_mult)
+                    print(result)
                     break
                 else:
                     print('Invalid choice. Please try again.')
@@ -162,7 +191,7 @@ def create_card(card_database):
             choice = input('Enter your choice (1-2): ')
             if choice == 2:
                 card = generate_generic_card(card_type, cursor)
-                print(card.text)
+                print(card)
                 break
             elif choice == 1:
                 print('Enter optional card details:')
@@ -210,13 +239,16 @@ def create_card(card_database):
             print('Invalid choice. Please try again.')
             continue
 
+
+load_dotenv()
+embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=os.getenv("GOOGLE_API_KEY"))
+llm = GoogleGenerativeAI(model="gemini-2.0-flash")
+
 vector_store = Chroma(
-    collection_name="OPTCG",
+    collection_name="OPTCGCards",
     embedding_function=embeddings,
-    persist_directory="./chroma_langchain_db",
+    persist_directory="./chroma_langchain_db_texts",
 )
-leader = str(Leader('','L','LEADER', '','', '',[''],'','',['Red'],['Strawhat'],'','').__dict__)
-results = vector_store.similarity_search(query=leader,k=5)
-for doc in results:
-    print(f"* {doc.page_content} [{doc.metadata}]")
+
+card_prompt = PromptTemplate.from_template("Fill in the missing details for the following {card_type} Card for the One Piece Trading Card Game. Card template: {card_template}. Make sure to fill in the missing attributes. Use the examples provided as inspiration, but make sure to keep the card original. Format the output like the examples. Examples: {card_examples}")
 create_card('asia-cards.db')

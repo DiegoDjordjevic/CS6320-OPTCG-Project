@@ -1,4 +1,3 @@
-import chromadb
 import json
 from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -9,9 +8,9 @@ load_dotenv()
 embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=os.getenv("GOOGLE_API_KEY"))
 
 vector_store = Chroma(
-    collection_name="OPTCG",
+    collection_name="OPTCGCards",
     embedding_function=embeddings,
-    persist_directory="./chroma_langchain_db",
+    persist_directory="./chroma_langchain_db_texts",
 )
 
 f = open("asia-cardlist.json")
