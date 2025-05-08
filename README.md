@@ -29,7 +29,3 @@ TO CREATE CARDS:
         GOOGLE_API_KEY='your key'
     - This program will not run without the API key.
     - Run create_cards.py. The program will prompt you step-by-step to generate an original card of a chosen type. It runs entirely within the terminal. 
-
-Next Steps:
-Have an automatic check for the downloaded cardlists and the extracted data.
-Possibly ignore SP Cards so that the original rarities for cards are kept.
