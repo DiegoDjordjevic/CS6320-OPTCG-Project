@@ -148,6 +148,10 @@ def ask_user(card_type, cursor):
             continue
     return None
 
+def get_card_description(model, card):
+    return model.invoke(f"Generate a description for the following card from the One Piece Trading Card Game. Reference what the character looks like in the One Piece Anime. Give a detailed description of the card itself so that an image can be generated from the description. Here is the card: {card}")
+
+
 def create_card(card_database):
     sqlite_connection = sqlite3.connect(card_database)
     cursor = sqlite_connection.cursor()
@@ -164,24 +168,36 @@ def create_card(card_database):
             card = ask_user(card_type, cursor)
             print("Here is your generated card:")
             print(card)
+            print("Here is a description of the card:")
+            description = get_card_description(llm, card)
+            print(description)
 
         elif choice == '2':
             card_type = 'CHARACTER'
             card = ask_user(card_type, cursor)
             print("Here is your generated card:")
             print(card)
+            print("Here is a description of the card:")
+            description = get_card_description(llm, card)
+            print(description)
 
         elif choice == '3':
             card_type = 'EVENT'
             card = ask_user(card_type, cursor)
             print("Here is your generated card:")
             print(card)
+            print("Here is a description of the card:")
+            description = get_card_description(llm, card)
+            print(description)
 
         elif choice == '4':
             card_type = 'STAGE'
             card = ask_user(card_type, cursor)
             print("Here is your generated card:")
             print(card)
+            print("Here is a description of the card:")
+            description = get_card_description(llm, card)
+            print(description)
 
         elif choice == '5':
             break
@@ -201,4 +217,3 @@ vector_store = Chroma(
 
 card_prompt = PromptTemplate.from_template("Fill in the missing details for the following {card_type} Card for the One Piece Trading Card Game. Card template: {card_template}. Make sure to fill in the missing attributes. Use the examples provided as inspiration, but make sure to keep the card original. Format the output like the examples. Examples: {card_examples}")
 create_card('asia-cards.db')
-
