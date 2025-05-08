@@ -10,44 +10,7 @@ from dotenv import load_dotenv
 import re
 import ast
 
-class Card:
-    def __init__(self, card_id, rarity, card_type, card_set, name, attribute, power, counter, color, feature, text, trigger):
-        self.card_id = card_id
-        self.rarity = rarity
-        self.card_type = card_type
-        self.card_set = card_set
-        self.name = name
-        self.attribute = attribute
-        self.power = power
-        self.counter = counter
-        self.color = color
-        self.feature = feature
-        self.text = text
-        self.trigger = trigger
-
-class Leader(Card):
-    def __init__(self, card_id, rarity, card_type, card_set, name, life, attribute, power, counter, color, feature, text, trigger):
-        super().__init__(card_id, rarity, card_type, card_set, name, attribute, power, counter, color, feature, text, trigger)
-        self.life = life
-
-class Character(Card):
-    def __init__(self, card_id, rarity, card_type, card_set, name, cost, attribute, power, counter, color, feature, text, trigger):
-        super().__init__(card_id, rarity, card_type, card_set, name, attribute, power, counter, color, feature, text, trigger)
-        self.cost = cost
-
-class Event(Card):
-    def __init__(self, card_id, rarity, card_type, card_set, name, cost, attribute, power, counter, color, feature, text, trigger):
-        super().__init__(card_id, rarity, card_type, card_set, name, attribute, power, counter, color, feature, text, trigger)
-        self.cost = cost
-
-class Stage(Card):
-    def __init__(self, card_id, rarity, card_type, card_set, name, cost, attribute, power, counter, color, feature, text, trigger):
-        super().__init__(card_id, rarity, card_type, card_set, name, attribute, power, counter, color, feature, text, trigger)
-        self.cost = cost
-
 def get_card_info(cursor, card_id):
-    #sqlite_connection = sqlite3.connect(card_database)
-    #cursor = sqlite_connection.cursor()
     cursor.execute(f"SELECT feature_name FROM feature_cards WHERE card_id='{card_id}'")
     card_features = [x[0] for x in cursor.fetchall()]
     cursor.execute(f"SELECT color_name FROM color_cards WHERE card_id='{card_id}'")
@@ -92,7 +55,7 @@ def generate_generic_card(card_type, cursor):
     response = llm.invoke(prompt)
     return response
 
-def generate_card(card_type, cursor, relevant_cards, card_template):
+def generate_card(card_type, relevant_cards, card_template):
     card_examples = json.dumps(relevant_cards, indent=4)
     prompt = f"Fill in the missing details for the following {card_type} Card for the One Piece Trading Card Game. Card template: {card_template}. Make sure to fill in the missing attributes. Use the examples provided as inspiration, but make sure to keep the card original. Format the output like the examples. Examples: {card_examples}"
     response = llm.invoke(prompt)
@@ -122,6 +85,69 @@ def format_new_card(card):
     res = ast.literal_eval(cleaned)
     return json.dumps(res, indent=4)
 
+def get_card_details(card_type):
+    print('Enter optional card details:')
+    card_template = dict()
+    card_template['card_id'] = ''
+    if card_type == 'LEADER':
+        card_template['rarity'] = 'L'
+    card_template['card_type'] = card_type
+    card_template['card_set'] = ''
+    card_template['name'] = input('Name: ')
+    if card_type == "LEADER" or card_type == "CHARACTER":
+        card_template['power'] = input('Power: ')
+    else:
+        card_template['power'] = ''
+    if card_type == 'CHARACTER':
+        card_template['counter'] = input('Counter: ')
+    else:
+        card_template['counter'] = ''
+    if card_type == 'LEADER':
+        card_template['life'] = input('Life: ')
+    else:
+        card_template['cost'] = input('Cost: ')
+    if card_type != "LEADER":
+        card_template['color'] = input('Color (Red, Green, Blue, Purple, Black, Yellow): ')
+    card_template['text'] = input(f'{card_type.lower().capitalize()}\'s effect: ')
+    if card_type != "LEADER":
+        card_template['trigger'] = input('Trigger: ')
+    print('For the next features if you wish to specify multiple separate them with commas')
+    card_template['feature'] = input('Features (ex. Straw Hat Crew, Fishman): ').split(',')
+    if card_type == "LEADER":
+        card_template['color'] = input('Colors (Red, Green, Blue, Purple, Black, Yellow): ').split(',')
+    if card_type == "LEADER" or card_type == "CHARACTER":
+        card_template['attribute'] = input('Attributes: (Slash, Ranged, Special, Strike, Wisdom): ').split(',')
+    else:
+        card_template['attribute'] = ''
+    if card_type == "LEADER":
+        card_template['trigger'] = ''
+    print("How random do you want the missing details to be? 0(random) - 1(similar to cards sharing same details)")
+    try:
+        lambda_mult = float(input('Enter a decimal between 0 and 1: '))
+    except ValueError:
+        print("Invalid input. Please enter a valid decimal number next time. randomness set to default of 0.8")
+        lambda_mult = 0.8
+    print("Card generated using RAG chain:")
+    result = generate_card_ragchain(card_type, str(card_template), lambda_mult)
+    return result
+
+def ask_user(card_type, cursor):
+    while True:
+        print('Would you like to specify card details?')
+        print('1. Yes')
+        print('2. No, generate a completely random card')
+        choice = input('Enter your choice (1-2): ')
+        if choice == '2':
+            card = generate_generic_card(card_type, cursor)
+            return card
+        elif choice == '1':
+            card = get_card_details(card_type)
+            return card
+        else:
+            print('Invalid choice. Please try again.')
+            continue
+    return None
+
 def create_card(card_database):
     sqlite_connection = sqlite3.connect(card_database)
     cursor = sqlite_connection.cursor()
@@ -135,110 +161,33 @@ def create_card(card_database):
         choice = input('Enter your choice (1-5): ')
         if choice == '1':
             card_type = 'LEADER'
-            while True:
-                print('Would you like to specify card details?')
-                print('1. Yes')
-                print('2. No, generate a completely random card')
-                choice = input('Enter your choice (1-2): ')
-                if choice == '2':
-                    card = generate_generic_card(card_type, cursor)
-                    print(card)
-                    break
-                elif choice == '1':
-                    print('Enter optional card details:')
-                    card_template = dict()
-                    card_template['card_id'] = ''
-                    card_template['rarity'] = 'L'
-                    card_template['card_type'] = card_type
-                    card_template['card_set'] = ''
-                    card_template['name'] = input('Name: ')
-                    card_template['power'] = input('Power: ')
-                    card_template['counter'] = ''
-                    card_template['life'] = input('Life: ')
-                    card_template['text'] = input('Leader\'s effect: ')
-                    print('For the next features if you wish to specify multiple separate them with commas')
-                    card_template['feature'] = input('Features (ex. Straw Hat Crew, Fishman): ').split(',')
-                    card_template['color'] = input('Colors (Red, Green, Blue, Purple, Black, Yellow): ').split(',')
-                    card_template['attribute'] = input('Attributes: (Slash, Ranged, Special, Strike, Wisdom): ').split(',')
-                    card_template['trigger'] = ''
-                    print("How random do you want the missing details to be? 0(random) - 1(similar to cards sharing same details)")
-                    try:
-                        lambda_mult = float(input('Enter a decimal between 0 and 1: '))
-                    except ValueError:
-                        print("Invalid input. Please enter a valid decimal number next time. randomness set to default of 0.8")
-                        lambda_mult = 0.8
-                    """similar_leaders = vector_store.similarity_search(query=str(card_template), k=10, filter={"card_type": card_type})
-                    relevant_cards = ""
-                    for lead in similar_leaders:
-                        print(f"* {lead.page_content} [{lead.metadata}]")
-                        relevant_cards += lead.page_content + ",\n"
-                    card = generate_card(card_type, cursor, relevant_cards, str(card_template))
-                    print(card)
-                    print(format_new_card(card))"""
-                    print("Card generated using RAG chain:")
-                    result = generate_card_ragchain(card_type, str(card_template), lambda_mult)
-                    print(result)
-                    break
-                else:
-                    print('Invalid choice. Please try again.')
-                    continue
+            card = ask_user(card_type, cursor)
+            print("Here is your generated card:")
+            print(card)
 
         elif choice == '2':
             card_type = 'CHARACTER'
-            print('Would you like to specify card details?')
-            print('1. Yes')
-            print('2. No, generate a completely random card')
-            choice = input('Enter your choice (1-2): ')
-            if choice == 2:
-                card = generate_generic_card(card_type, cursor)
-                print(card)
-                break
-            elif choice == 1:
-                print('Enter optional card details:')
-                break
-            else:
-                print('Invalid choice. Please try again.')
-                continue
+            card = ask_user(card_type, cursor)
+            print("Here is your generated card:")
+            print(card)
 
         elif choice == '3':
             card_type = 'EVENT'
-            print('Would you like to specify card details?')
-            print('1. Yes')
-            print('2. No, generate a completely random card')
-            choice = input('Enter your choice (1-2): ')
-            if choice == 2:
-                card = generate_generic_card(card_type, cursor)
-                print(card.text)
-                break
-            elif choice == 1:
-                print('Enter optional card details:')
-                break
-            else:
-                print('Invalid choice. Please try again.')
-                continue
+            card = ask_user(card_type, cursor)
+            print("Here is your generated card:")
+            print(card)
 
         elif choice == '4':
             card_type = 'STAGE'
-            print('Would you like to specify card details?')
-            print('1. Yes')
-            print('2. No, generate a completely random card')
-            choice = input('Enter your choice (1-2): ')
-            if choice == 2:
-                card = generate_generic_card(card_type, cursor)
-                print(card.text)
-                break
-            elif choice == 1:
-                print('Enter optional card details:')
-                break
-            else:
-                print('Invalid choice. Please try again.')
-                continue
+            card = ask_user(card_type, cursor)
+            print("Here is your generated card:")
+            print(card)
+
         elif choice == '5':
             break
         else:
             print('Invalid choice. Please try again.')
             continue
-
 
 load_dotenv()
 embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=os.getenv("GOOGLE_API_KEY"))
@@ -252,3 +201,4 @@ vector_store = Chroma(
 
 card_prompt = PromptTemplate.from_template("Fill in the missing details for the following {card_type} Card for the One Piece Trading Card Game. Card template: {card_template}. Make sure to fill in the missing attributes. Use the examples provided as inspiration, but make sure to keep the card original. Format the output like the examples. Examples: {card_examples}")
 create_card('asia-cards.db')
+
