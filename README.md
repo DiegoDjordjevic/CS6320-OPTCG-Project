@@ -18,6 +18,7 @@ TO EXTRACT JSON FROM HTML FILES:
 TO BUILD SQLITE DATABASE OF EACH CARD:
     - Run build_database.py
     - This will either update or build a new database "asia-cards.db" based in SQLite using Python's built-in SQLite functionality.
+    - To completely refresh the database, delete asia-cards.db from the directory then rerun build_databse.py
 
 TO BUILD CHROMADB VECTOR STORE:
     - Run build_vector_store.py
