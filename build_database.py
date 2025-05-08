@@ -87,7 +87,7 @@ def build_sqlite(json_name, database_name):
         f = open(json_name)
         data = json.load(f)
 
-        # Load next card into database. Currently incomplete.
+        # Load next card into database.
         for i in data:
             next_card = data[i]
             query_stem = "INSERT OR IGNORE INTO cards (card_id, rarity, card_type, card_set, name"

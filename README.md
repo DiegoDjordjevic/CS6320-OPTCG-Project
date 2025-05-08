@@ -19,6 +19,16 @@ TO BUILD SQLITE DATABASE OF EACH CARD:
     - Run build_database.py
     - This will either update or build a new database "asia-cards.db" based in SQLite using Python's built-in SQLite functionality.
 
+TO BUILD CHROMADB VECTOR STORE:
+    - Run build_vector_store.py
+    - This will create the ChromaDB database locally, and insert all cards into it.
+
+TO CREATE CARDS:    
+    - Create a .env file in the project directory containing a Google Gemini api key in the following format.
+        GOOGLE_API_KEY='your key'
+    - This program will not run without the API key.
+    - Run create_cards.py. The program will prompt you step-by-step to generate an original card of a chosen type. It runs entirely within the terminal. 
+
 Next Steps:
 Have an automatic check for the downloaded cardlists and the extracted data.
 Possibly ignore SP Cards so that the original rarities for cards are kept.
